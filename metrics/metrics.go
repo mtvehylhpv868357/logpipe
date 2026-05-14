@@ -3,59 +3,51 @@ package metrics
 import (
 	"fmt"
 	"io"
+	"os"
 	"sync/atomic"
 )
 
-// Counters tracks line processing statistics across the pipeline.
+// Counters holds atomic counters for pipeline telemetry.
 type Counters struct {
-	LinesRead    atomic.Int64
-	LinesMatched atomic.Int64
-	LinesDropped atomic.Int64
-	WriteErrors  atomic.Int64
+	received uint64
+	routed   uint64
+	dropped  uint64
+	errors   uint64
 }
 
-// IncRead increments the lines-read counter.
-func (c *Counters) IncRead() {
-	c.LinesRead.Add(1)
+// NewCounters returns a zeroed Counters instance.
+func NewCounters() *Counters {
+	return &Counters{}
 }
 
-// IncMatched increments the lines-matched counter.
-func (c *Counters) IncMatched() {
-	c.LinesMatched.Add(1)
-}
+func (c *Counters) IncReceived() { atomic.AddUint64(&c.received, 1) }
+func (c *Counters) IncRouted()   { atomic.AddUint64(&c.routed, 1) }
+func (c *Counters) IncDropped()  { atomic.AddUint64(&c.dropped, 1) }
+func (c *Counters) IncErrors()   { atomic.AddUint64(&c.errors, 1) }
 
-// IncDropped increments the lines-dropped counter.
-func (c *Counters) IncDropped() {
-	c.LinesDropped.Add(1)
-}
-
-// IncWriteError increments the write-error counter.
-func (c *Counters) IncWriteError() {
-	c.WriteErrors.Add(1)
-}
-
-// Snapshot returns a point-in-time copy of the current counter values.
+// Snapshot is an immutable copy of counter values at a point in time.
 type Snapshot struct {
-	LinesRead    int64
-	LinesMatched int64
-	LinesDropped int64
-	WriteErrors  int64
+	Received uint64
+	Routed   uint64
+	Dropped  uint64
+	Errors   uint64
 }
 
-// Snapshot captures the current counter values atomically.
+// Snapshot returns a consistent read of all counters.
 func (c *Counters) Snapshot() Snapshot {
 	return Snapshot{
-		LinesRead:    c.LinesRead.Load(),
-		LinesMatched: c.LinesMatched.Load(),
-		LinesDropped: c.LinesDropped.Load(),
-		WriteErrors:  c.WriteErrors.Load(),
+		Received: atomic.LoadUint64(&c.received),
+		Routed:   atomic.LoadUint64(&c.routed),
+		Dropped:  atomic.LoadUint64(&c.dropped),
+		Errors:   atomic.LoadUint64(&c.errors),
 	}
 }
 
-// Print writes a human-readable summary of the snapshot to w.
+// Print writes a human-readable summary to w (defaults to os.Stdout).
 func (s Snapshot) Print(w io.Writer) {
-	fmt.Fprintf(w, "lines read:    %d\n", s.LinesRead)
-	fmt.Fprintf(w, "lines matched: %d\n", s.LinesMatched)
-	fmt.Fprintf(w, "lines dropped: %d\n", s.LinesDropped)
-	fmt.Fprintf(w, "write errors:  %d\n", s.WriteErrors)
+	if w == nil {
+		w = os.Stdout
+	}
+	fmt.Fprintf(w, "received=%d routed=%d dropped=%d errors=%d\n",
+		s.Received, s.Routed, s.Dropped, s.Errors)
 }
