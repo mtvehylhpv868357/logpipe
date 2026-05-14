@@ -48,6 +48,16 @@ Lines are read from stdin, evaluated against each output's filter rule, and forw
 
 ---
 
+## Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--config` | `logpipe.yaml` | Path to the configuration file |
+| `--dry-run` | `false` | Print matched output names without writing |
+| `--verbose` | `false` | Log internal routing decisions to stderr |
+
+---
+
 ## Features
 
 - Reads from stdin — works with any log source
