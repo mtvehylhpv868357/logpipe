@@ -1,74 +1,58 @@
 package config
 
 import (
-	"errors"
+	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v3"
-
-	"github.com/yourorg/logpipe/filter"
 )
 
-// OutputType represents the destination type for log lines.
-type OutputType string
+// TransformConfig describes a single transformation step.
+type TransformConfig struct {
+	Type    string            `yaml:"type"`
+	Options map[string]string `yaml:"options"`
+}
 
-const (
-	OutputStdout OutputType = "stdout"
-	OutputFile   OutputType = "file"
-	OutputHTTP   OutputType = "http"
-)
+// OutputConfig describes a single output destination.
+type OutputConfig struct {
+	Type       string            `yaml:"type"`
+	Path       string            `yaml:"path,omitempty"`
+	Filters    []FilterConfig    `yaml:"filters,omitempty"`
+	Transforms []TransformConfig `yaml:"transforms,omitempty"`
+}
 
-// Output defines a single output destination with optional filters.
-type Output struct {
-	Type    OutputType    `yaml:"type"`
-	Target  string        `yaml:"target"`
-	Filters []filter.Rule `yaml:"filters"`
+// FilterConfig describes a single filter rule.
+type FilterConfig struct {
+	Type  string `yaml:"type"`
+	Value string `yaml:"value"`
 }
 
 // Config is the top-level configuration structure.
 type Config struct {
-	Outputs []Output `yaml:"outputs"`
+	Outputs []OutputConfig `yaml:"outputs"`
 }
 
-// Load reads and parses a YAML config file from the given path.
+// Load reads and parses a YAML config file at the given path.
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("config: cannot read %q: %w", path, err)
 	}
 
 	var cfg Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("config: invalid YAML: %w", err)
 	}
 
-	if err := cfg.validate(); err != nil {
-		return nil, err
+	if len(cfg.Outputs) == 0 {
+		return nil, fmt.Errorf("config: at least one output is required")
+	}
+
+	for i, o := range cfg.Outputs {
+		if o.Type == "" {
+			return nil, fmt.Errorf("config: output[%d] missing type", i)
+		}
 	}
 
 	return &cfg, nil
-}
-
-// validate checks the loaded config for semantic errors.
-func (c *Config) validate() error {
-	if len(c.Outputs) == 0 {
-		return errors.New("config must define at least one output")
-	}
-	for i, out := range c.Outputs {
-		switch out.Type {
-		case OutputStdout, OutputFile, OutputHTTP:
-			// valid
-		default:
-			return errors.New("output[" + string(rune('0'+i)) + "] has unknown type: " + string(out.Type))
-		}
-		if (out.Type == OutputFile || out.Type == OutputHTTP) && out.Target == "" {
-			return errors.New("output target is required for type " + string(out.Type))
-		}
-		for j := range c.Outputs[i].Filters {
-			if err := c.Outputs[i].Filters[j].Compile(); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
