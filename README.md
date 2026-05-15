@@ -58,6 +58,18 @@ Lines are read from stdin, evaluated against each output's filter rule, and forw
 
 ---
 
+## Filter Expressions
+
+Filters are evaluated against parsed JSON fields. Supported operators:
+
+- Equality: `level == "error"`
+- Logical OR / AND: `level == "warn" || level == "error"`
+- Regex match: `message ~= "timeout"`
+
+Lines that are not valid JSON are treated as plain text. Plain-text lines only match filters that use `message` as the field name, where `message` refers to the entire raw line.
+
+---
+
 ## Features
 
 - Reads from stdin — works with any log source
