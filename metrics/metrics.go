@@ -51,3 +51,12 @@ func (s Snapshot) Print(w io.Writer) {
 	fmt.Fprintf(w, "received=%d routed=%d dropped=%d errors=%d\n",
 		s.Received, s.Routed, s.Dropped, s.Errors)
 }
+
+// DropRate returns the fraction of received messages that were dropped,
+// in the range [0.0, 1.0]. Returns 0 if no messages have been received.
+func (s Snapshot) DropRate() float64 {
+	if s.Received == 0 {
+		return 0
+	}
+	return float64(s.Dropped) / float64(s.Received)
+}
