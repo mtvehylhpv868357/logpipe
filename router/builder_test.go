@@ -70,3 +70,27 @@ func TestBuild_FileMissingPath(t *testing.T) {
 		t.Fatal("expected error when file path is empty")
 	}
 }
+
+func TestBuild_MultipleOutputs(t *testing.T) {
+	tmp := filepath.Join(t.TempDir(), "multi.log")
+	cfg := &config.Config{
+		Outputs: []config.Output{
+			{Type: "stdout"},
+			{Type: "file", Path: tmp},
+		},
+	}
+	r, err := router.Build(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	_, _ = r.Dispatch([]byte("multi output"))
+	_ = r.Close()
+
+	data, err := os.ReadFile(tmp)
+	if err != nil {
+		t.Fatalf("could not read output file: %v", err)
+	}
+	if string(data) != "multi output\n" {
+		t.Fatalf("unexpected file content: %q", string(data))
+	}
+}
