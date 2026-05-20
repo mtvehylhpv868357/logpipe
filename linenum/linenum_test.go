@@ -56,6 +56,16 @@ func TestNumberer_Reset(t *testing.T) {
 	}
 }
 
+func TestNumberer_ResetRestoresCount(t *testing.T) {
+	n := New()
+	n.Transform("a")
+	n.Transform("b")
+	n.Reset()
+	if n.Count() != 0 {
+		t.Errorf("expected count 0 after reset, got %d", n.Count())
+	}
+}
+
 func TestNumberer_Count(t *testing.T) {
 	n := New()
 	if n.Count() != 0 {
